@@ -1,5 +1,4 @@
 plugins {
-    id 'com.android.application' version '8.2.2' apply false // Указываем версию AGP
     id 'com.google.devtools.ksp'
     id 'kotlin-android'
 }
@@ -28,11 +27,10 @@ def getVersionCode = {
     return code
 }
 
-// Загружаем keystore.properties только в signingConfigs, без жёсткой проверки
+// Загружаем keystore.properties только если он существует
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
     compileSdk 36
@@ -236,4 +234,11 @@ dependencies {
     fullImplementation 'nl.dionsegijn:konfetti-xml:2.0.5'
 
     lintChecks 'com.android.security.lint:lint:1.0.3'
+}
+
+repositories {
+    mavenCentral()
+    google()
+    maven { url 'https://jitpack.io' }
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
