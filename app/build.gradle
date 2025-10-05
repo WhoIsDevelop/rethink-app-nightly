@@ -21,7 +21,7 @@ def getVersionCode = {
         logger.info("missing env version code: $ex.message")
     }
     if (code == 0) {
-        code = project.properties['VERSION_CODE'] as Integer
+        code = project.properties['VERSION_CODE'] as Integer ?: 1
         logger.info("project properties version code: $code")
     }
     return code
