@@ -1,0 +1,77 @@
+name: Build APKs for All ABIs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Позволяет запускать workflow вручную
+
+jobs:
+  build:
+    name: Build APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Проверяем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Получаем полный git history для получения версии с помощью `git describe`
+
+      # 2. Устанавливаем JDK 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. Кэшируем Gradle зависимости
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # 4. Делаем gradlew исполняемым
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # 5. Получаем версию из git describe
+      - name: Get git version
+        id: git_version
+        run: echo "GIT_VERSION=$(git describe --tags --always)" >> $GITHUB_ENV
+
+      # 6. Сборка APK для всех ABI и flavors
+      - name: Build APKs
+        env:
+          VERSION_CODE: ${{ secrets.VERSION_CODE || '1000' }} # Устанавливаем значение по умолчанию, если не задано
+          ALPHA_KS_ALIAS: ${{ secrets.ALPHA_KS_ALIAS }}
+          ALPHA_KS_PASSPHRASE: ${{ secrets.ALPHA_KS_PASSPHRASE }}
+          ALPHA_KS_FILE: ${{ secrets.ALPHA_KS_FILE }}
+          ALPHA_KS_STORE_PASSPHRASE: ${{ secrets.ALPHA_KS_STORE_PASSPHRASE }}
+        run: |
+          ./gradlew assembleAlpha \
+            -PfirestackRepo=github \
+            -PfirestackCommit=main \
+            -PversionCode=$VERSION_CODE
+
+      # 7. Собираем APK в артефакты
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: |
+            app/build/outputs/apk/**/*.apk
+          retention-days: 7
+
+      # 8. (Опционально) Логирование для отладки
+      - name: List generated APKs
+        run: |
+          find app/build/outputs/apk -type f -name "*.apk"
