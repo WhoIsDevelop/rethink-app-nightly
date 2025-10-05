@@ -1,4 +1,4 @@
-name: Build APKs for All ABIs
+name: Build APK for arm64-v8a
 
 on:
   push:
@@ -7,19 +7,18 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: # Позволяет запускать workflow вручную
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build APKs
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Проверяем репозиторий
-      - name: Checkout repository
+      # 1. Проверяем исходный код
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Получаем полный git history для получения версии с помощью `git describe`
+          fetch-depth: 0 # Для git describe --tags --always
 
       # 2. Устанавливаем JDK 17
       - name: Set up JDK 17
@@ -28,50 +27,43 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. Кэшируем Gradle зависимости
-      - name: Cache Gradle dependencies
+      # 3. Кэшируем Gradle
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-${{ runner.os }}-
+            ${{ runner.os }}-gradle-
 
-      # 4. Делаем gradlew исполняемым
+      # 4. Декодируем keystore из секрета
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_FILE_BASE64 }}" | base64 -d > app/keystore.jks
+
+      # 5. Создаём keystore.properties
+      - name: Create keystore.properties
+        run: |
+          echo "keyAlias=${{ secrets.KEYSTORE_ALIAS }}" > app/keystore.properties
+          echo "keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}" >> app/keystore.properties
+          echo "storeFile=app/keystore.jks" >> app/keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}" >> app/keystore.properties
+
+      # 6. Делаем gradlew исполняемым
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # 5. Получаем версию из git describe
-      - name: Get git version
-        id: git_version
-        run: echo "GIT_VERSION=$(git describe --tags --always)" >> $GITHUB_ENV
-
-      # 6. Сборка APK для всех ABI и flavors
-      - name: Build APKs
+      # 7. Собираем APK
+      - name: Build APK
         env:
-          VERSION_CODE: ${{ secrets.VERSION_CODE || '1000' }} # Устанавливаем значение по умолчанию, если не задано
-          ALPHA_KS_ALIAS: ${{ secrets.ALPHA_KS_ALIAS }}
-          ALPHA_KS_PASSPHRASE: ${{ secrets.ALPHA_KS_PASSPHRASE }}
-          ALPHA_KS_FILE: ${{ secrets.ALPHA_KS_FILE }}
-          ALPHA_KS_STORE_PASSPHRASE: ${{ secrets.ALPHA_KS_STORE_PASSPHRASE }}
-        run: |
-          ./gradlew assembleAlpha \
-            -PfirestackRepo=github \
-            -PfirestackCommit=main \
-            -PversionCode=$VERSION_CODE
+          VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew clean assembleWebsiteFullRelease
 
-      # 7. Собираем APK в артефакты
-      - name: Upload APKs
+      # 8. Загружаем APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apks
-          path: |
-            app/build/outputs/apk/**/*.apk
+          name: rethinkdns-nightly-arm64-v8a
+          path: app/build/outputs/apk/websiteFullRelease/arm64-v8a/*.apk
           retention-days: 7
-
-      # 8. (Опционально) Логирование для отладки
-      - name: List generated APKs
-        run: |
-          find app/build/outputs/apk -type f -name "*.apk"
