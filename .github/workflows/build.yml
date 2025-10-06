@@ -78,6 +78,8 @@ jobs:
             exit 1
           fi
           ls -l app/keystore.jks
+          cp app/keystore.jks keystore.jks
+          cp app/keystore.jks app/app/keystore.jks
 
       # 7. Создаём keystore.properties
       - name: Create keystore.properties
