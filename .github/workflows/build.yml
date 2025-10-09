@@ -208,10 +208,18 @@ jobs:
           draft: false
           prerelease: true
           body: |
-            Nightly build RetninkDNS Retrixed
+            RetninkDNS-RetriXed (nightly) v.${{ github.run_number }}
+            ## What's Changed
+            ${{ steps.changelog.outputs.changelog }}
             - Commit: ${{ github.sha }}
             - Version: ${{ github.run_number }}
             - Built on: ${{ github.event.repository.updated_at }}
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          git log --pretty=%s $(git describe --tags --abbrev=0)..HEAD > changelog.txt
+          echo "::set-output name=changelog::$(cat changelog.txt)"
 
       # 24. Загружаем APK в GitHub Release
       - name: Upload APK to Release
