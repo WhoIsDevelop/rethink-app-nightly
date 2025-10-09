@@ -1114,11 +1114,12 @@ abstract class AppDatabase : RoomDatabase() {
             """
             CREATE TABLE DoTEndpoint_backup (
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                dotName TEXT NOT NULL,
-                dotURL TEXT NOT NULL,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
                 desc TEXT NOT NULL DEFAULT '',
                 isSelected INTEGER NOT NULL,
                 isCustom INTEGER NOT NULL,
+                isSecure INTEGER NOT NULL,
                 modifiedDataTime INTEGER NOT NULL DEFAULT 0,
                 latency INTEGER NOT NULL
             )
@@ -1127,15 +1128,16 @@ abstract class AppDatabase : RoomDatabase() {
         db.execSQL(
             """
             INSERT INTO DoTEndpoint_backup (
-                id, dotName, dotURL, desc, isSelected, isCustom, modifiedDataTime, latency
+                id, name, url, desc, isSelected, isCustom, isSecure, modifiedDataTime, latency
             )
             SELECT 
                 id, 
-                dotName, 
-                dotURL, 
+                name, 
+                url, 
                 COALESCE(desc, '') AS desc, 
                 isSelected, 
                 isCustom, 
+                isSecure,
                 modifiedDataTime, 
                 latency
             FROM DoTEndpoint
