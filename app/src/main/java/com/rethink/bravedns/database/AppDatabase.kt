@@ -1068,19 +1068,47 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("UPDATE ProxyEndpoint SET userName = '' WHERE userName IS NULL")
                     db.execSQL("UPDATE ProxyEndpoint SET password = '' WHERE password IS NULL")
                         
-                    // DoHEndpoint
-                    db.execSQL("UPDATE DoHEndpoint SET dohExplanation = '' WHERE dohExplanation IS NULL")
+                    
                     // DoTEndpoint
                     db.execSQL("UPDATE DoTEndpoint SET desc = '' WHERE desc IS NULL")
                     // ODoHEndpoint
                     db.execSQL("UPDATE ODoHEndpoint SET desc = '' WHERE desc IS NULL")
-                    // DNSCryptEndpoint
-                    db.execSQL("UPDATE DNSCryptEndpoint SET dnsCryptExplanation = '' WHERE dnsCryptExplanation IS NULL")
                     // DNSCryptRelayEndpoint
                     db.execSQL("UPDATE DNSCryptRelayEndpoint SET dnsCryptRelayExplanation = '' WHERE dnsCryptRelayExplanation IS NULL")
                     // DNSProxyEndpoint
                     db.execSQL("UPDATE DNSProxyEndpoint SET proxyAppName = '' WHERE proxyAppName IS NULL")
                     db.execSQL("UPDATE DNSProxyEndpoint SET proxyIP = '' WHERE proxyIP IS NULL")
+
+                    db.execSQL(
+                        "CREATE TABLE 'DNSCryptEndpoint_backup' ( 'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 'dnsCryptName' TEXT NOT NULL, 'dnsCryptURL' TEXT NOT NULL,'dnsCryptExplanation' TEXT NOT NULL DEFAULT '', 'isSelected' INTEGER NOT NULL, 'isCustom' INTEGER NOT NULL,'modifiedDataTime' INTEGER NOT NULL, 'latency' INTEGER NOT NULL) "
+                    )
+
+                    db.execSQL(
+                        """
+                        INSERT INTO DNSCryptEndpoint_backup (
+                            id, dnsCryptName, dnsCryptURL, dnsCryptExplanation, isSelected, isCustom, modifiedDataTime, latency
+                        )
+                        SELECT 
+                            id, 
+                            dnsCryptName, 
+                            dnsCryptURL, 
+                            COALESCE(dnsCryptExplanation, '') AS dnsCryptExplanation, 
+                            isSelected, 
+                            isCustom, 
+                            modifiedDataTime, 
+                            latency, 
+                        FROM DNSCryptEndpoint
+                        """.trimIndent()
+                    )
+
+ 
+                    db.execSQL("DROP TABLE DNSCryptEndpoint")
+                    // Переименовываем временную таблицу
+                    db.execSQL("ALTER TABLE DNSCryptEndpoint_backup RENAME TO DNSCryptEndpoint")
+                
+
+
+                    
                     
                     db.execSQL(
                         """
@@ -1120,7 +1148,7 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("DROP TABLE DoHEndpoint")
                     // Переименовываем временную таблицу
                     db.execSQL("ALTER TABLE DoHEndpoint_backup RENAME TO DoHEndpoint")
-                    Logger.i(LOG_TAG_APP_DB, "MIGRATION_26_27: Updated DoHEndpoint schema to make dohExplanation NOT NULL with default ''")
+                
                     
                     Logger.i(LOG_TAG_APP_DB, "MIGRATION_25_26: Updated ProxyEndpoint, DNSCryptEndpoint, DNSCryptRelayEndpoint, DNSProxyEndpoint, DoHEndpoint, DoTEndpoint, ODoHEndpoint to replace NULL with empty strings")
     
