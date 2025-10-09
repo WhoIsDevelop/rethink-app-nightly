@@ -41,7 +41,7 @@ android {
 
     defaultConfig {
         applicationId "com.rethinkdns.retrixed"
-        minSdkVersion 35
+        minSdkVersion 36
         targetSdkVersion 36
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -91,8 +91,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
