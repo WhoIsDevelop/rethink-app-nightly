@@ -1059,101 +1059,272 @@ abstract class AppDatabase : RoomDatabase() {
             }
 
              
-        private val MIGRATION_25_26: Migration =
-            object : Migration(25, 26) {
-                override fun migrate(db: SupportSQLiteDatabase) {
-                    // ProxyEndpoint
-                    db.execSQL("UPDATE ProxyEndpoint SET proxyAppName = '' WHERE proxyAppName IS NULL")
-                    db.execSQL("UPDATE ProxyEndpoint SET proxyIP = '' WHERE proxyIP IS NULL")
-                    db.execSQL("UPDATE ProxyEndpoint SET userName = '' WHERE userName IS NULL")
-                    db.execSQL("UPDATE ProxyEndpoint SET password = '' WHERE password IS NULL")
-                        
-                    
-                    // DoTEndpoint
-                    db.execSQL("UPDATE DoTEndpoint SET desc = '' WHERE desc IS NULL")
-                    // ODoHEndpoint
-                    db.execSQL("UPDATE ODoHEndpoint SET desc = '' WHERE desc IS NULL")
-                    // DNSCryptRelayEndpoint
-                    db.execSQL("UPDATE DNSCryptRelayEndpoint SET dnsCryptRelayExplanation = '' WHERE dnsCryptRelayExplanation IS NULL")
-                    // DNSProxyEndpoint
-                    db.execSQL("UPDATE DNSProxyEndpoint SET proxyAppName = '' WHERE proxyAppName IS NULL")
-                    db.execSQL("UPDATE DNSProxyEndpoint SET proxyIP = '' WHERE proxyIP IS NULL")
+    private val MIGRATION_25_26: Migration = 
+        object : Migration(25, 26) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+        // 1. ProxyEndpoint: Recreate table to enforce NOT NULL and replace NULLs
+        db.execSQL(
+            """
+            CREATE TABLE ProxyEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                proxyName TEXT NOT NULL DEFAULT '',
+                proxyMode INTEGER NOT NULL,
+                proxyType TEXT NOT NULL DEFAULT '',
+                proxyAppName TEXT NOT NULL DEFAULT '',
+                proxyIP TEXT NOT NULL DEFAULT '',
+                userName TEXT NOT NULL DEFAULT '',
+                password TEXT NOT NULL DEFAULT '',
+                proxyPort INTEGER NOT NULL,
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                isUDP INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL,
+                latency INTEGER NOT NULL,
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO ProxyEndpoint_backup (
+                id, proxyName, proxyMode, proxyType, proxyAppName, proxyIP, userName, password, proxyPort, isSelected, isCustom, isUDP, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                proxyName,
+                proxyMode,
+                proxyType,
+                COALESCE(proxyAppName, '') AS proxyAppName, 
+                COALESCE(proxyIP, '') AS proxyIP, 
+                COALESCE(userName, '') AS userName, 
+                COALESCE(password, '') AS password, 
+                proxyPort,
+                isSelected, 
+                isCustom, 
+                isUDP,
+                modifiedDataTime, 
+                latency
+            FROM ProxyEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE ProxyEndpoint")
+        db.execSQL("ALTER TABLE ProxyEndpoint_backup RENAME TO ProxyEndpoint")
 
-                    db.execSQL(
-                        "CREATE TABLE 'DNSCryptEndpoint_backup' ( 'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 'dnsCryptName' TEXT NOT NULL, 'dnsCryptURL' TEXT NOT NULL,'dnsCryptExplanation' TEXT NOT NULL DEFAULT '', 'isSelected' INTEGER NOT NULL, 'isCustom' INTEGER NOT NULL,'modifiedDataTime' INTEGER NOT NULL, 'latency' INTEGER NOT NULL) "
-                    )
+        // 2. DoTEndpoint: Recreate table to enforce NOT NULL and replace NULLs
+        db.execSQL(
+            """
+            CREATE TABLE DoTEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                dotName TEXT NOT NULL,
+                dotURL TEXT NOT NULL,
+                desc TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL DEFAULT 0,
+                latency INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO DoTEndpoint_backup (
+                id, dotName, dotURL, desc, isSelected, isCustom, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                dotName, 
+                dotURL, 
+                COALESCE(desc, '') AS desc, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency
+            FROM DoTEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE DoTEndpoint")
+        db.execSQL("ALTER TABLE DoTEndpoint_backup RENAME TO DoTEndpoint")
 
-                    db.execSQL(
-                        """
-                        INSERT INTO DNSCryptEndpoint_backup (
-                            id, dnsCryptName, dnsCryptURL, dnsCryptExplanation, isSelected, isCustom, modifiedDataTime, latency
-                        )
-                        SELECT 
-                            id, 
-                            dnsCryptName, 
-                            dnsCryptURL, 
-                            COALESCE(dnsCryptExplanation, '') AS dnsCryptExplanation, 
-                            isSelected, 
-                            isCustom, 
-                            modifiedDataTime, 
-                            latency, 
-                        FROM DNSCryptEndpoint
-                        """.trimIndent()
-                    )
+        // 3. ODoHEndpoint: Recreate table to enforce NOT NULL and replace NULLs
+        db.execSQL(
+            """
+            CREATE TABLE ODoHEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                odohName TEXT NOT NULL,
+                odohURL TEXT NOT NULL,
+                desc TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL DEFAULT 0,
+                latency INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO ODoHEndpoint_backup (
+                id, odohName, odohURL, desc, isSelected, isCustom, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                odohName, 
+                odohURL, 
+                COALESCE(desc, '') AS desc, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency
+            FROM ODoHEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE ODoHEndpoint")
+        db.execSQL("ALTER TABLE ODoHEndpoint_backup RENAME TO ODoHEndpoint")
 
- 
-                    db.execSQL("DROP TABLE DNSCryptEndpoint")
-                    // Переименовываем временную таблицу
-                    db.execSQL("ALTER TABLE DNSCryptEndpoint_backup RENAME TO DNSCryptEndpoint")
-                
+        // 4. DNSCryptRelayEndpoint: Recreate table to enforce NOT NULL and replace NULLs
+        db.execSQL(
+            """
+            CREATE TABLE DNSCryptRelayEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                dnsCryptRelayName TEXT NOT NULL,
+                dnsCryptRelayURL TEXT NOT NULL,
+                dnsCryptRelayExplanation TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL,
+                latency INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO DNSCryptRelayEndpoint_backup (
+                id, dnsCryptRelayName, dnsCryptRelayURL, dnsCryptRelayExplanation, isSelected, isCustom, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                dnsCryptRelayName, 
+                dnsCryptRelayURL, 
+                COALESCE(dnsCryptRelayExplanation, '') AS dnsCryptRelayExplanation, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency
+            FROM DNSCryptRelayEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE DNSCryptRelayEndpoint")
+        db.execSQL("ALTER TABLE DNSCryptRelayEndpoint_backup RENAME TO DNSCryptRelayEndpoint")
 
+        // 5. DNSProxyEndpoint: Recreate table to enforce NOT NULL and replace NULLs
+        db.execSQL(
+            """
+            CREATE TABLE DNSProxyEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                proxyAppName TEXT NOT NULL DEFAULT '',
+                proxyIP TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL,
+                latency INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO DNSProxyEndpoint_backup (
+                id, proxyAppName, proxyIP, isSelected, isCustom, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                COALESCE(proxyAppName, '') AS proxyAppName, 
+                COALESCE(proxyIP, '') AS proxyIP, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency
+            FROM DNSProxyEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE DNSProxyEndpoint")
+        db.execSQL("ALTER TABLE DNSProxyEndpoint_backup RENAME TO DNSProxyEndpoint")
 
-                    
-                    
-                    db.execSQL(
-                        """
-                        CREATE TABLE DoHEndpoint_backup (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                            dohName TEXT NOT NULL,
-                            dohURL TEXT NOT NULL,
-                            dohExplanation TEXT NOT NULL DEFAULT '',
-                            isSelected INTEGER NOT NULL,
-                            isCustom INTEGER NOT NULL,
-                            modifiedDataTime INTEGER NOT NULL DEFAULT 0,
-                            latency INTEGER NOT NULL,
-                            isSecure INTEGER NOT NULL DEFAULT 1
-                        )
-                        """.trimIndent()
-                     )
-                    // Копируем данные, заменяя NULL в dohExplanation на ''
-                    db.execSQL(
-                        """
-                        INSERT INTO DoHEndpoint_backup (
-                            id, dohName, dohURL, dohExplanation, isSelected, isCustom, modifiedDataTime, latency, isSecure
-                        )
-                        SELECT 
-                            id, 
-                            dohName, 
-                            dohURL, 
-                            COALESCE(dohExplanation, '') AS dohExplanation, 
-                            isSelected, 
-                            isCustom, 
-                            modifiedDataTime, 
-                            latency, 
-                            isSecure
-                        FROM DoHEndpoint
-                        """.trimIndent()
-                    )
-                    // Удаляем старую таблицу
-                    db.execSQL("DROP TABLE DoHEndpoint")
-                    // Переименовываем временную таблицу
-                    db.execSQL("ALTER TABLE DoHEndpoint_backup RENAME TO DoHEndpoint")
-                
-                    
-                    Logger.i(LOG_TAG_APP_DB, "MIGRATION_25_26: Updated ProxyEndpoint, DNSCryptEndpoint, DNSCryptRelayEndpoint, DNSProxyEndpoint, DoHEndpoint, DoTEndpoint, ODoHEndpoint to replace NULL with empty strings")
-    
-                }
-            }
+        // 6. DNSCryptEndpoint: Recreate table (your original code was correct here)
+        db.execSQL(
+            """
+            CREATE TABLE DNSCryptEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                dnsCryptName TEXT NOT NULL,
+                dnsCryptURL TEXT NOT NULL,
+                dnsCryptExplanation TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL,
+                latency INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO DNSCryptEndpoint_backup (
+                id, dnsCryptName, dnsCryptURL, dnsCryptExplanation, isSelected, isCustom, modifiedDataTime, latency
+            )
+            SELECT 
+                id, 
+                dnsCryptName, 
+                dnsCryptURL, 
+                COALESCE(dnsCryptExplanation, '') AS dnsCryptExplanation, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency
+            FROM DNSCryptEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE DNSCryptEndpoint")
+        db.execSQL("ALTER TABLE DNSCryptEndpoint_backup RENAME TO DNSCryptEndpoint")
+
+        // 7. DoHEndpoint: Recreate table, handle isSecure explicitly
+        db.execSQL(
+            """
+            CREATE TABLE DoHEndpoint_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                dohName TEXT NOT NULL,
+                dohURL TEXT NOT NULL,
+                dohExplanation TEXT NOT NULL DEFAULT '',
+                isSelected INTEGER NOT NULL,
+                isCustom INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL DEFAULT 0,
+                latency INTEGER NOT NULL,
+                isSecure INTEGER NOT NULL DEFAULT 1
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO DoHEndpoint_backup (
+                id, dohName, dohURL, dohExplanation, isSelected, isCustom, modifiedDataTime, latency, isSecure
+            )
+            SELECT 
+                id, 
+                dohName, 
+                dohURL, 
+                COALESCE(dohExplanation, '') AS dohExplanation, 
+                isSelected, 
+                isCustom, 
+                modifiedDataTime, 
+                latency, 
+                COALESCE(isSecure, 1) AS isSecure
+            FROM DoHEndpoint
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE DoHEndpoint")
+        db.execSQL("ALTER TABLE DoHEndpoint_backup RENAME TO DoHEndpoint")
+
+        Logger.i(
+            LOG_TAG_APP_DB,
+            "MIGRATION_25_26: Updated ProxyEndpoint, DoTEndpoint, ODoHEndpoint, DNSCryptRelayEndpoint, DNSProxyEndpoint, DNSCryptEndpoint, DoHEndpoint to replace NULL with empty strings and enforce NOT NULL constraints"
+        )
+    }
+                                    }
 
 
 
