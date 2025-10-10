@@ -196,6 +196,27 @@ jobs:
           path: app/build/outputs/apk/websiteFull/release/app-website-full-universal-release.apk
           retention-days: 7
 
+      - name: Get Last Tag
+        id: last_tag
+        run: echo "::set-output name=tag::$(git describe --tags --abbrev=0 2>/dev/null || echo '')"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          if [ -z "${{ steps.last_tag.outputs.tag }}" ]; then
+            # Если тегов нет, берём все коммиты
+            CHANGELOG=$(git log --pretty=%s)
+          else
+            # Берем коммиты от последнего тега до HEAD
+            CHANGELOG=$(git log --pretty=%s ${{ steps.last_tag.outputs.tag }}..HEAD)
+          fi
+          # Фильтруем подписи (например, Signed-off-by)
+          CHANGELOG=$(echo "$CHANGELOG" | grep -v "Signed-off-by")
+          # Форматируем в markdown
+          CHANGELOG=$(echo "$CHANGELOG" | sed 's/^/- /')
+          echo "::set-output name=changelog::$CHANGELOG"
+        shell: bash
+
       # 23. Создаём GitHub Release
       - name: Create GitHub Release
         id: create_release
@@ -214,12 +235,6 @@ jobs:
             - Commit: ${{ github.sha }}
             - Version: ${{ github.run_number }}
             - Built on: ${{ github.event.repository.updated_at }}
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          git log --pretty=%s $(git describe --tags --abbrev=0)..HEAD > changelog.txt
-          echo "::set-output name=changelog::$(cat changelog.txt)"
 
       # 24. Загружаем APK в GitHub Release
       - name: Upload APK to Release
