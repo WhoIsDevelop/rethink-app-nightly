@@ -1151,30 +1151,34 @@ abstract class AppDatabase : RoomDatabase() {
             """
             CREATE TABLE ODoHEndpoint_backup (
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                odohName TEXT NOT NULL,
-                odohURL TEXT NOT NULL,
+                name TEXT NOT NULL,
+                proxy TEXT NOT NULL,
+                resolver TEXT NOT NULL DEFAULT '',
+                proxyIps TEXT NOT NULL,
                 desc TEXT NOT NULL DEFAULT '',
                 isSelected INTEGER NOT NULL,
                 isCustom INTEGER NOT NULL,
-                modifiedDataTime INTEGER NOT NULL DEFAULT 0,
-                latency INTEGER NOT NULL
+                latency INTEGER NOT NULL,
+                modifiedDataTime INTEGER NOT NULL
             )
             """.trimIndent()
         )
         db.execSQL(
             """
             INSERT INTO ODoHEndpoint_backup (
-                id, odohName, odohURL, desc, isSelected, isCustom, modifiedDataTime, latency
+                id, name, proxy, resolver, proxyIps, desc, isSelected, isCustom, latency, modifiedDataTime
             )
             SELECT 
                 id, 
-                odohName, 
-                odohURL, 
+                name, 
+                proxy, 
+                resolver, 
+                proxyIps, 
                 COALESCE(desc, '') AS desc, 
                 isSelected, 
                 isCustom, 
-                modifiedDataTime, 
-                latency
+                latency, 
+                modifiedDataTime
             FROM ODoHEndpoint
             """.trimIndent()
         )
