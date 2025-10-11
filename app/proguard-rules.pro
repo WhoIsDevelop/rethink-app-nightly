@@ -18,7 +18,7 @@
 #-keepattributes SourceFile,LineNumberTable
 
 #Dont obfuscate
--dontobfuscate
+#-dontobfuscate
 -printmapping obfuscation/mapping.txt
 -printmapping build/outputs/mapping/release/mapping.txt
 
@@ -91,4 +91,4 @@
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
-#-renamesourcefileattribute SourceFile
+-renamesourcefileattribute SourceFile
