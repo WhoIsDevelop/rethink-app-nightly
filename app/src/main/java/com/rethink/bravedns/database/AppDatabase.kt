@@ -1063,49 +1063,11 @@ abstract class AppDatabase : RoomDatabase() {
         object : Migration(25, 26) {
         override fun migrate(db: SupportSQLiteDatabase) {
         // 1. ProxyEndpoint: Recreate table to enforce NOT NULL and replace NULLs
-        db.execSQL(
-            """
-            CREATE TABLE ProxyEndpoint_backup (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                proxyName TEXT NOT NULL DEFAULT '',
-                proxyMode INTEGER NOT NULL,
-                proxyType TEXT NOT NULL DEFAULT '',
-                proxyAppName TEXT NOT NULL DEFAULT '',
-                proxyIP TEXT NOT NULL DEFAULT '',
-                userName TEXT NOT NULL DEFAULT '',
-                password TEXT NOT NULL DEFAULT '',
-                proxyPort INTEGER NOT NULL,
-                isSelected INTEGER NOT NULL,
-                isCustom INTEGER NOT NULL,
-                isUDP INTEGER NOT NULL,
-                modifiedDataTime INTEGER NOT NULL,
-                latency INTEGER NOT NULL,
-            )
-            """.trimIndent()
-        )
-        db.execSQL(
-            """
-            INSERT INTO ProxyEndpoint_backup (
-                id, proxyName, proxyMode, proxyType, proxyAppName, proxyIP, userName, password, proxyPort, isSelected, isCustom, isUDP, modifiedDataTime, latency
-            )
-            SELECT 
-                id, 
-                proxyName,
-                proxyMode,
-                proxyType,
-                COALESCE(proxyAppName, '') AS proxyAppName, 
-                COALESCE(proxyIP, '') AS proxyIP, 
-                COALESCE(userName, '') AS userName, 
-                COALESCE(password, '') AS password, 
-                proxyPort,
-                isSelected, 
-                isCustom, 
-                isUDP,
-                modifiedDataTime, 
-                latency
-            FROM ProxyEndpoint
-            """.trimIndent()
-        )
+        db.execSQL("CREATE TABLE 'ProxyEndpoint_backup' ('id' INTEGER NOT NULL, 'proxyName' TEXT NOT NULL, 'proxyMode' INTEGER NOT NULL, 'proxyType' TEXT NOT NULL, 'proxyAppName' TEXT NOT NULL, 'proxyIP' TEXT NOT NULL, 'userName' TEXT NOT NULL, 'password' TEXT NOT NULL, 'proxyPort' INTEGER NOT NULL, 'isSelected' INTEGER NOT NULL, 'isCustom' INTEGER NOT NULL, 'isUDP' INTEGER NOT NULL, 'modifiedDataTime' INTEGER NOT NULL, 'latency' INTEGER NOT NULL, PRIMARY KEY (id))")
+        db.execSQL("INSERT INTO ProxyEndpoint_backup SELECT id, proxyName, proxyMode, proxyType, COALESCE(proxyAppName, '') AS proxyAppName, COALESCE(proxyIP, '') AS proxyIP, COALESCE(userName, '') AS userName, COALESCE(password, '') AS password, proxyPort, isSelected, isCustom, isUDP, modifiedDataTime, latency FROM ProxyEndpoint")
+            
+
+        
         db.execSQL("DROP TABLE ProxyEndpoint")
         db.execSQL("ALTER TABLE ProxyEndpoint_backup RENAME TO ProxyEndpoint")
 
