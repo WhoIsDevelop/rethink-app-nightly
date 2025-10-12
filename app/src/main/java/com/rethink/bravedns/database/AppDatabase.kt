@@ -1065,9 +1065,6 @@ abstract class AppDatabase : RoomDatabase() {
         // 1. ProxyEndpoint: Recreate table to enforce NOT NULL and replace NULLs
         db.execSQL("CREATE TABLE 'ProxyEndpoint_backup' ('id' INTEGER NOT NULL, 'proxyName' TEXT NOT NULL, 'proxyMode' INTEGER NOT NULL, 'proxyType' TEXT NOT NULL, 'proxyAppName' TEXT NOT NULL, 'proxyIP' TEXT NOT NULL, 'userName' TEXT NOT NULL, 'password' TEXT NOT NULL, 'proxyPort' INTEGER NOT NULL, 'isSelected' INTEGER NOT NULL, 'isCustom' INTEGER NOT NULL, 'isUDP' INTEGER NOT NULL, 'modifiedDataTime' INTEGER NOT NULL, 'latency' INTEGER NOT NULL, PRIMARY KEY (id))")
         db.execSQL("INSERT INTO ProxyEndpoint_backup SELECT id, proxyName, proxyMode, proxyType, COALESCE(proxyAppName, '') AS proxyAppName, COALESCE(proxyIP, '') AS proxyIP, COALESCE(userName, '') AS userName, COALESCE(password, '') AS password, proxyPort, isSelected, isCustom, isUDP, modifiedDataTime, latency FROM ProxyEndpoint")
-            
-
-        
         db.execSQL("DROP TABLE ProxyEndpoint")
         db.execSQL("ALTER TABLE ProxyEndpoint_backup RENAME TO ProxyEndpoint")
 
@@ -1183,35 +1180,9 @@ abstract class AppDatabase : RoomDatabase() {
         db.execSQL("ALTER TABLE DNSCryptRelayEndpoint_backup RENAME TO DNSCryptRelayEndpoint")
 
         // 5. DNSProxyEndpoint: Recreate table to enforce NOT NULL and replace NULLs
-        db.execSQL(
-            """
-            CREATE TABLE DNSProxyEndpoint_backup (
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                proxyAppName TEXT NOT NULL DEFAULT '',
-                proxyIP TEXT NOT NULL DEFAULT '',
-                isSelected INTEGER NOT NULL,
-                isCustom INTEGER NOT NULL,
-                modifiedDataTime INTEGER NOT NULL,
-                latency INTEGER NOT NULL
-            )
-            """.trimIndent()
-        )
-        db.execSQL(
-            """
-            INSERT INTO DNSProxyEndpoint_backup (
-                id, proxyAppName, proxyIP, isSelected, isCustom, modifiedDataTime, latency
-            )
-            SELECT 
-                id, 
-                COALESCE(proxyAppName, '') AS proxyAppName, 
-                COALESCE(proxyIP, '') AS proxyIP, 
-                isSelected, 
-                isCustom, 
-                modifiedDataTime, 
-                latency
-            FROM DNSProxyEndpoint
-            """.trimIndent()
-        )
+
+        db.execSQL("CREATE TABLE 'DNSProxyEndpoint_backup' ('id' INTEGER NOT NULL, 'proxyName' TEXT NOT NULL, 'proxyType' TEXT NOT NULL, 'proxyAppName' TEXT NOT NULL, 'proxyIP' TEXT NOT NULL, 'proxyPort' INTEGER NOT NULL, 'isSelected' INTEGER NOT NULL, 'isCustom' INTEGER NOT NULL, 'modifiedDataTime' INTEGER NOT NULL, 'latency' INTEGER NOT NULL, PRIMARY KEY (id))")
+        db.execSQL("INSERT INTO DNSProxyEndpoint_backup SELECT id, proxyName, proxyType, COALESCE(proxyAppName, '') AS proxyAppName, COALESCE(proxyIP, '') AS proxyIP, proxyPort, isSelected, isCustom, modifiedDataTime, latency FROM DNSProxyEndpoint")
         db.execSQL("DROP TABLE DNSProxyEndpoint")
         db.execSQL("ALTER TABLE DNSProxyEndpoint_backup RENAME TO DNSProxyEndpoint")
 
